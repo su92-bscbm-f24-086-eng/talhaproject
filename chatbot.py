@@ -11,6 +11,7 @@ Date    : 2026
 import json
 import random
 import re
+from pathlib import Path
 from difflib import get_close_matches
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -27,6 +28,27 @@ STOP_WORDS = {
     "how", "many", "much", "when", "where", "with", "by", "from", "give",
     "there", "has", "have", "had", "cricket", "cricketer", "s",
 }
+
+
+def find_knowledge_base(kb_path: str) -> Path:
+    """Locate the knowledge base file, whatever folder the app is started from.
+
+    Looks at the given path, then next to chatbot.py, then in the current folder,
+    and finally searches the project for any 'knowledge_base.json' (any letter case).
+    Raises a clear FileNotFoundError if the file is missing.
+    """
+    here = Path(__file__).resolve().parent
+    candidates = [Path(kb_path), here / "data" / "knowledge_base.json",
+                  Path.cwd() / "data" / "knowledge_base.json"]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    for file in here.rglob("*"):                       # last try: search whole project
+        if file.is_file() and file.name.lower() == "knowledge_base.json":
+            return file
+    raise FileNotFoundError(
+        "knowledge_base.json not found. Upload the folder 'data' (with "
+        "knowledge_base.json inside it) next to app.py in your repository.")
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +99,7 @@ class CricketChatbot:
 
         Input : path of the JSON knowledge base file.
         """
-        with open(kb_path, "r", encoding="utf-8") as file:
+        with open(find_knowledge_base(kb_path), "r", encoding="utf-8") as file:
             self.kb = json.load(file)
 
         # Build parallel lists: one entry for every stored pattern (question).
